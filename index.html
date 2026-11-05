@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Light System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --black: #050505;
+            --dark-surface: rgba(15, 15, 15, 0.8);
+            --white: #ffffff;
+            --red: #D32F2F;
+            --gold: #FFC107;
+            --border: rgba(255, 255, 255, 0.1);
+            --ok: #4CAF50;
+        }
+        
+        body { 
+            background-color: var(--black);
+            color: var(--white); 
+            font-family: 'Montserrat', sans-serif; 
+            display: flex; justify-content: center; align-items: flex-start; 
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
+            overflow-x: hidden; position: relative; transition: background 0.8s;
+        }
+
+        .bg-orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.3; animation: float 10s infinite alternate ease-in-out; z-index: 0; transition: 0.8s; }
+        .orb-1 { width: 300px; height: 300px; background: var(--red); top: -50px; left: -100px; }
+        .orb-2 { width: 250px; height: 250px; background: var(--gold); bottom: -50px; right: -50px; animation-delay: -5s; }
+        body.light-on .orb-1 { transform: scale(1.5); opacity: 0.6; }
+
+        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, 40px); } }
+
+        .card { 
+            background: var(--dark-surface); backdrop-filter: blur(25px);
+            padding: 40px 25px; border-radius: 30px; border: 1px solid var(--border);
+            border-top: 4px solid var(--gold); width: 100%; max-width: 380px; 
+            text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.8); z-index: 10;
+            margin: 20px 0;
+        }
+        
+        .title { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 2rem; margin: 0; letter-spacing: 4px; }
+        .title span { color: var(--gold); }
+        
+        #clock { font-family: 'Rajdhani', sans-serif; font-size: 3.5rem; font-weight: 700; margin: 15px 0 0 0; line-height: 1; }
+        .blink { animation: blinker 1s linear infinite; color: var(--gold); }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        #date { font-size: 0.85rem; color: #888; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700; }
+        
+        .btn-container { position: relative; margin: 0 auto 30px auto; width: 130px; height: 130px; }
+        .power-btn { 
+            width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--border); 
+            background: #111; color: var(--white); cursor: pointer; transition: 0.3s;
+            outline: none; display: flex; justify-content: center; align-items: center; position: relative; z-index: 2;
+        }
+        .power-btn svg { width: 50px; height: 50px; stroke: #444; transition: 0.3s; }
+        .power-btn.active { background: var(--red); border-color: var(--red); box-shadow: 0 0 40px rgba(211, 47, 47, 0.5); }
+        .power-btn.active svg { stroke: white; }
+
+        #status { margin-bottom: 25px; font-weight: 700; letter-spacing: 2px; font-size: 0.9rem; }
+
+        /* ---- sensors ---- */
+        .sensor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+        .sensor { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 12px; padding: 12px 6px; }
+        .sensor span { display: block; color: #888; font-size: 0.65rem; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px; }
+        .sensor b { font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; color: var(--white); }
+        .sensor b.warn { color: var(--red); }
+        .sensor b.good { color: var(--ok); }
+
+        .auto-box { text-align: left; background: rgba(0,0,0,0.4); border-left: 4px solid var(--gold); border-radius: 12px; padding: 16px; margin-bottom: 25px; }
+        .auto-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; }
+        .auto-row .lbl { font-weight: 700; font-size: 0.85rem; }
+        .auto-row .sub { color: #888; font-size: 0.72rem; margin-top: 4px; font-weight: 600; }
+        .auto-btn { background: #111; color: #888; border: 1px solid #333; padding: 8px 18px; border-radius: 8px; font-weight: 900; font-size: 0.8rem; cursor: pointer; min-width: 60px; }
+        .auto-btn.on { background: var(--gold); color: black; border-color: var(--gold); }
+        .th-label { color: #aaa; font-size: 0.75rem; font-weight: 700; display: block; margin-bottom: 8px; }
+        #thSlider { width: 100%; accent-color: var(--gold); }
+
+        .sched-section { text-align: left; border-top: 1px solid var(--border); padding-top: 25px; margin-bottom: 25px; }
+        .sched-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .sched-title { color: var(--gold); font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; margin: 0; }
+        .add-btn { background: var(--gold); color: black; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 900; font-size: 0.8rem; cursor: pointer; }
+        
+        .sched-item { background: rgba(0,0,0,0.4); border-left: 4px solid var(--gold); border-radius: 12px; padding: 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .sched-times { font-family: 'Rajdhani', sans-serif; font-weight: 700; color: white; }
+        .sched-times div { font-size: 1.4rem; line-height: 1.2; } 
+        .sched-times span { color: var(--gold); font-size: 0.9rem; margin-right: 10px; }
+        .sched-days { color: #888; font-size: 0.85rem; margin-top: 8px; font-family: 'Montserrat'; font-weight: 600; }
+
+        .del-btn { background: rgba(211, 47, 47, 0.1); color: var(--red); border: 1px solid var(--red); width: 40px; height: 40px; border-radius: 10px; cursor: pointer; }
+
+        #addForm { display: none; background: #000; border: 2px solid var(--gold); padding: 25px 20px; border-radius: 20px; margin-bottom: 20px; }
+        .form-label { color: #aaa; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 10px; display: block; }
+        
+        .time-input-group { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        input[type="tel"] { background: #111; border: 1px solid #333; color: var(--gold); padding: 12px; border-radius: 8px; font-family: 'Rajdhani'; font-size: 1.8rem; outline: none; width: 110px; text-align: center; font-weight: 700; }
+        
+        .ampm-toggle { display: flex; background: #111; border-radius: 8px; border: 1px solid #333; overflow: hidden; }
+        .ampm-btn { border: none; background: transparent; color: #555; padding: 10px 15px; cursor: pointer; font-weight: 700; font-family: 'Montserrat'; transition: 0.3s; }
+        .ampm-btn.active { background: var(--gold); color: black; }
+
+        .days-row { display: flex; justify-content: space-between; margin: 20px 0; }
+        .day-btn { width: 35px; height: 35px; border-radius: 50%; background: #111; border: 1px solid #333; color: white; cursor: pointer; font-family: 'Rajdhani'; font-weight: 700; }
+        .day-btn.active { background: var(--gold); color: black; border-color: var(--gold); }
+        
+        .save-btn { width: 100%; background: var(--red); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: 900; cursor: pointer; letter-spacing: 2px; font-size: 1rem; }
+
+        /* ---- activity log ---- */
+        .log-section { text-align: left; border-top: 1px solid var(--border); padding-top: 25px; }
+        .log-item { display: flex; gap: 10px; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+        .log-time { color: #888; font-family: 'Rajdhani', sans-serif; font-weight: 700; min-width: 78px; }
+        .log-type { font-weight: 900; font-size: 0.65rem; letter-spacing: 1px; min-width: 52px; color: var(--gold); }
+        .log-type.fault { color: var(--red); }
+        .log-type.wifi { color: #4FC3F7; }
+        .log-msg { color: #ddd; word-break: break-word; }
+        .log-empty { color: #666; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div class="bg-orb orb-1"></div>
+<div class="bg-orb orb-2"></div>
+
+<div class="card">
+    <h1 class="title">SMART<span>LIGHT</span></h1>
+    <div id="clock">00<span class="blink">:</span>00 PM</div>
+    <div id="date">...</div>
+    
+    <div class="btn-container">
+        <button id="pwrBtn" class="power-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+        </button>
+    </div>
+    
+    <div id="status">SYNCING...</div>
+
+    <div class="sensor-grid">
+        <div class="sensor"><span>TEMP</span><b id="sTemp">--</b></div>
+        <div class="sensor"><span>HUMIDITY</span><b id="sHum">--</b></div>
+        <div class="sensor"><span>LIGHT</span><b id="sLdr">--</b></div>
+        <div class="sensor"><span>MOTION</span><b id="sMot">--</b></div>
+        <div class="sensor"><span>WI-FI</span><b id="sRssi">--</b></div>
+        <div class="sensor"><span>DEVICE</span><b id="sDev">--</b></div>
+    </div>
+
+    <div class="auto-box">
+        <div class="auto-row">
+            <div>
+                <div class="lbl">Auto mode</div>
+                <div class="sub">On when it is dark and motion is detected</div>
+            </div>
+            <button id="autoBtn" class="auto-btn">OFF</button>
+        </div>
+        <label class="th-label">Dark below light level: <span id="thVal">1200</span></label>
+        <input type="range" id="thSlider" min="0" max="4095" step="50" value="1200">
+    </div>
+
+    <div class="sched-section">
+        <div class="sched-header">
+            <h3 class="sched-title">Automations</h3>
+            <button id="toggleFormBtn" class="add-btn">+ NEW</button>
+        </div>
+        
+        <div id="addForm">
+            <span class="form-label">System Start (ON)</span>
+            <div class="time-input-group">
+                <input type="tel" id="onTimeInput" placeholder="HH:MM" maxlength="5">
+                <div class="ampm-toggle">
+                    <button class="ampm-btn active" id="onAM" onclick="setAMPM('on', 'AM')">AM</button>
+                    <button class="ampm-btn" id="onPM" onclick="setAMPM('on', 'PM')">PM</button>
+                </div>
+            </div>
+
+            <span class="form-label">System Stop (OFF)</span>
+            <div class="time-input-group">
+                <input type="tel" id="offTimeInput" placeholder="HH:MM" maxlength="5">
+                <div class="ampm-toggle">
+                    <button class="ampm-btn active" id="offAM" onclick="setAMPM('off', 'AM')">AM</button>
+                    <button class="ampm-btn" id="offPM" onclick="setAMPM('off', 'PM')">PM</button>
+                </div>
+            </div>
+
+            <div class="days-row">
+                <button class="day-btn" data-day="1">M</button><button class="day-btn" data-day="2">T</button><button class="day-btn" data-day="3">W</button>
+                <button class="day-btn" data-day="4">T</button><button class="day-btn" data-day="5">F</button><button class="day-btn" data-day="6">S</button>
+                <button class="day-btn" data-day="0">S</button>
+            </div>
+            <button id="saveSchedBtn" class="save-btn">DEPLOY TASK</button>
+        </div>
+
+        <div id="scheduleList"></div>
+    </div>
+
+    <div class="log-section">
+        <div class="sched-header">
+            <h3 class="sched-title">Activity log</h3>
+        </div>
+        <div id="logList"><div class="log-empty">No activity yet.</div></div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+    // PASTE YOUR OWN FIREBASE WEB CONFIG HERE (Firebase Console > Project settings > Your apps)
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "YOUR_PROJECT_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    let currentLightState = true;   // true = OFF (active-LOW relay)
+    let autoOn = false;
+    let lastSensors = null;
+    let activeSchedules = {};
+    let onAMPM = "AM";
+    let offAMPM = "AM";
+
+    const $ = (id) => document.getElementById(id);
+
+    // --- AUTO-FORMAT TIME INPUT ---
+    const formatInput = (e) => {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length >= 3) val = val.slice(0, 2) + ':' + val.slice(2, 4);
+        e.target.value = val;
+    };
+    $('onTimeInput').addEventListener('input', formatInput);
+    $('offTimeInput').addEventListener('input', formatInput);
+
+    // --- FIREBASE SYNC: light, mode, schedules, sensors ---
+    db.ref('/home').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        currentLightState = data.lightState !== false;   // missing value = OFF
+        const isOn = !currentLightState;
+        $('pwrBtn').className = isOn ? 'power-btn active' : 'power-btn';
+        $('status').innerText = isOn ? "SYSTEM ACTIVE" : "STANDBY";
+        document.body.classList.toggle('light-on', isOn);
+
+        autoOn = !!data.auto;
+        $('autoBtn').innerText = autoOn ? 'ON' : 'OFF';
+        $('autoBtn').classList.toggle('on', autoOn);
+
+        const slider = $('thSlider');
+        if (document.activeElement !== slider) {
+            slider.value = data.darkThreshold != null ? data.darkThreshold : 1200;
+            $('thVal').innerText = slider.value;
+        }
+
+        lastSensors = data.sensors || null;
+        renderSensors();
+
+        activeSchedules = data.schedules || {};
+        renderSchedules();
+    });
+
+    function renderSensors() {
+        const s = lastSensors;
+        const set = (id, v, cls) => { const el = $(id); el.innerText = v; el.className = cls || ''; };
+        if (!s) { set('sDev', 'NO DATA'); return; }
+        set('sTemp', s.temp != null ? s.temp.toFixed(1) + '°C' : '--', s.temp != null && s.temp >= 60 ? 'warn' : '');
+        set('sHum',  s.hum  != null ? Math.round(s.hum) + '%' : '--');
+        set('sLdr',  s.ldr  != null ? s.ldr : '--');
+        set('sMot',  s.motion ? 'DETECTED' : 'NONE');
+        set('sRssi', s.rssi != null ? s.rssi + ' dBm' : '--');
+        updateDeviceStatus();
+    }
+
+    function updateDeviceStatus() {
+        const s = lastSensors;
+        if (!s || !s.ts) { if (s) { $('sDev').innerText = 'ONLINE'; $('sDev').className = 'good'; } return; }
+        const age = Date.now() / 1000 - s.ts;
+        const el = $('sDev');
+        if (age > 30) { el.innerText = 'OFFLINE'; el.className = 'warn'; }
+        else if (s.fault && s.fault !== 'OK') { el.innerText = s.fault; el.className = 'warn'; }
+        else { el.innerText = 'ONLINE'; el.className = 'good'; }
+    }
+
+    // --- ACTIVITY LOG (last 15 events) ---
+    db.ref('/logs').limitToLast(15).on('value', (snap) => {
+        const list = $('logList');
+        const items = [];
+        snap.forEach(c => { items.push(c.val()); });
+        list.innerHTML = '';
+        if (!items.length) { list.innerHTML = '<div class="log-empty">No activity yet.</div>'; return; }
+        items.reverse().forEach(l => {
+            const row = document.createElement('div'); row.className = 'log-item';
+            const t = document.createElement('span'); t.className = 'log-time';
+            t.textContent = l.t ? new Date(l.t * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '--';
+            const ty = document.createElement('span');
+            ty.className = 'log-type ' + (l.type || '');
+            ty.textContent = (l.type || '').toUpperCase();
+            const m = document.createElement('span'); m.className = 'log-msg'; m.textContent = l.msg || '';
+            row.append(t, ty, m);
+            list.appendChild(row);
+        });
+    });
+
+    // --- CONTROLS ---
+    // Manual power button also switches auto mode off (manual override).
+    $('pwrBtn').onclick = () => db.ref('/home').update({ lightState: !currentLightState, auto: false });
+    $('autoBtn').onclick = () => db.ref('/home').update({ auto: !autoOn });
+    $('thSlider').addEventListener('input', (e) => { $('thVal').innerText = e.target.value; });
+    $('thSlider').addEventListener('change', (e) => db.ref('/home/darkThreshold').set(parseInt(e.target.value)));
+
+    $('toggleFormBtn').onclick = () => { const f = $('addForm'); f.style.display = f.style.display === 'block' ? 'none' : 'block'; };
+    document.querySelectorAll('.day-btn').forEach(btn => btn.onclick = function() { this.classList.toggle('active'); });
+
+    function setAMPM(type, val) {
+        if (type === 'on') {
+            onAMPM = val;
+            $('onAM').classList.toggle('active', val === 'AM');
+            $('onPM').classList.toggle('active', val === 'PM');
+        } else {
+            offAMPM = val;
+            $('offAM').classList.toggle('active', val === 'AM');
+            $('offPM').classList.toggle('active', val === 'PM');
+        }
+    }
+
+    function convertTo24Hour(timeStr, ampm) {
+        let [hours, minutes] = timeStr.split(':');
+        hours = parseInt(hours);
+        if (ampm === "PM" && hours < 12) hours += 12;
+        if (ampm === "AM" && hours === 12) hours = 0;
+        return hours.toString().padStart(2, '0') + ":" + (minutes || "00");
+    }
+
+    function formatTo12Hour(time24) {
+        let [h, m] = time24.split(':');
+        h = parseInt(h);
+        let ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${m} ${ampm}`;
+    }
+
+    $('saveSchedBtn').onclick = () => {
+        const onRaw = $('onTimeInput').value;
+        const offRaw = $('offTimeInput').value;
+        
+        if (!onRaw.includes(':') || !offRaw.includes(':')) {
+            alert("Just type 4 digits, I'll handle the rest!");
+            return;
+        }
+
+        const on24 = convertTo24Hour(onRaw, onAMPM);
+        const off24 = convertTo24Hour(offRaw, offAMPM);
+        let days = []; document.querySelectorAll('.day-btn.active').forEach(b => days.push(parseInt(b.dataset.day)));
+        
+        db.ref('/home/schedules').push({ onTime: on24, offTime: off24, days: days });
+        $('addForm').style.display = 'none';
+        $('onTimeInput').value = "";
+        $('offTimeInput').value = "";
+    };
+
+    window.deleteSchedule = (key) => db.ref('/home/schedules/' + key).remove();
+
+    function renderSchedules() {
+        const list = $('scheduleList');
+        list.innerHTML = '';
+        const dayMap = { 0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat" };
+        for (let key in activeSchedules) {
+            let s = activeSchedules[key];
+            let daysText = (!s.days || s.days.length === 0) ? "EVERYDAY" : s.days.map(d => dayMap[d]).join(', ');
+            list.innerHTML += `
+                <div class="sched-item">
+                    <div class="sched-times">
+                        <div><span>ON</span> ${formatTo12Hour(s.onTime)}</div>
+                        <div style="margin-top:8px;"><span>OFF</span> ${formatTo12Hour(s.offTime)}</div>
+                        <div class="sched-days">🔁 ${daysText}</div>
+                    </div>
+                    <button class="del-btn" onclick="deleteSchedule('${key}')">✕</button>
+                </div>`;
+        }
+    }
+
+    // Clock only. Schedules now run on the ESP32, so they fire even when this page is closed.
+    setInterval(() => {
+        const now = new Date();
+        $('clock').innerHTML = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(" ", '<span class="blink"> </span>');
+        $('date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        updateDeviceStatus();
+    }, 1000);
+</script>
+</body>
+</html>
